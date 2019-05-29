@@ -1952,6 +1952,8 @@ S2.define('select2/selection/search',[
 
     this.$searchContainer = $search;
     this.$search = $search.find('input');
+    this.isTyping = false;
+
 
     var $rendered = decorated.call(this);
 
@@ -2051,6 +2053,23 @@ S2.define('select2/selection/search',[
         self.$selection.off('keyup.search');
       }
     );
+    
+    this.$selection.on(
+      'compositionstart',
+      '.select2-search--inline',
+      function (evt) {
+        self.isTyping = true;
+      }
+    );
+
+    this.$selection.on(
+      'compositionend',
+      '.select2-search--inline',
+      function (evt) {
+        self.isTyping = false;
+        self.handleSearch();
+      }
+    );
 
     this.$selection.on(
       'keyup.search input.search',
@@ -2120,6 +2139,7 @@ S2.define('select2/selection/search',[
   };
 
   Search.prototype.handleSearch = function () {
+    if (this.isTyping) { return; }
     this.resizeSearch();
 
     if (!this._keyUpPrevented) {
@@ -2150,9 +2170,7 @@ S2.define('select2/selection/search',[
     if (this.$search.attr('placeholder') !== '') {
       width = this.$selection.find('.select2-selection__rendered').innerWidth();
     } else {
-      var minimumWidth = this.$search.val().length + 1;
-
-      width = (minimumWidth * 0.75) + 'em';
+      width = (this.$search.val().length + 2) + 'em';
     }
 
     this.$search.css('width', width);
@@ -4019,6 +4037,7 @@ S2.define('select2/dropdown/search',[
 
     this.$searchContainer = $search;
     this.$search = $search.find('input');
+    this.isTyping = false;
 
     $rendered.prepend($search);
 
@@ -4047,6 +4066,23 @@ S2.define('select2/dropdown/search',[
     this.$search.on('keyup input', function (evt) {
       self.handleSearch(evt);
     });
+
+    this.$search.on(
+      'compositionstart',
+      '.select2-search__field',
+      function (evt) {
+        self.isTyping = true;
+      }
+    );
+
+    this.$search.on(
+      'compositionend',
+      '.select2-search__field',
+      function (evt) {
+        self.isTyping = false;
+        self.handleSearch();
+      }
+    );
 
     container.on('open', function () {
       self.$search.attr('tabindex', 0);
@@ -4085,6 +4121,7 @@ S2.define('select2/dropdown/search',[
   };
 
   Search.prototype.handleSearch = function (evt) {
+    if (this.isTyping) { return; }
     if (!this._keyUpPrevented) {
       var input = this.$search.val();
 
@@ -5798,164 +5835,6 @@ S2.define('select2/core',[
   return Select2;
 });
 
-S2.define('select2/compat/utils',[
-  'jquery'
-], function ($) {
-  function syncCssClasses ($dest, $src, adapter) {
-    var classes, replacements = [], adapted;
-
-    classes = $.trim($dest.attr('class'));
-
-    if (classes) {
-      classes = '' + classes; // for IE which returns object
-
-      $(classes.split(/\s+/)).each(function () {
-        // Save all Select2 classes
-        if (this.indexOf('select2-') === 0) {
-          replacements.push(this);
-        }
-      });
-    }
-
-    classes = $.trim($src.attr('class'));
-
-    if (classes) {
-      classes = '' + classes; // for IE which returns object
-
-      $(classes.split(/\s+/)).each(function () {
-        // Only adapt non-Select2 classes
-        if (this.indexOf('select2-') !== 0) {
-          adapted = adapter(this);
-
-          if (adapted != null) {
-            replacements.push(adapted);
-          }
-        }
-      });
-    }
-
-    $dest.attr('class', replacements.join(' '));
-  }
-
-  return {
-    syncCssClasses: syncCssClasses
-  };
-});
-
-S2.define('select2/compat/containerCss',[
-  'jquery',
-  './utils'
-], function ($, CompatUtils) {
-  // No-op CSS adapter that discards all classes by default
-  function _containerAdapter (clazz) {
-    return null;
-  }
-
-  function ContainerCSS () { }
-
-  ContainerCSS.prototype.render = function (decorated) {
-    var $container = decorated.call(this);
-
-    var containerCssClass = this.options.get('containerCssClass') || '';
-
-    if ($.isFunction(containerCssClass)) {
-      containerCssClass = containerCssClass(this.$element);
-    }
-
-    var containerCssAdapter = this.options.get('adaptContainerCssClass');
-    containerCssAdapter = containerCssAdapter || _containerAdapter;
-
-    if (containerCssClass.indexOf(':all:') !== -1) {
-      containerCssClass = containerCssClass.replace(':all:', '');
-
-      var _cssAdapter = containerCssAdapter;
-
-      containerCssAdapter = function (clazz) {
-        var adapted = _cssAdapter(clazz);
-
-        if (adapted != null) {
-          // Append the old one along with the adapted one
-          return adapted + ' ' + clazz;
-        }
-
-        return clazz;
-      };
-    }
-
-    var containerCss = this.options.get('containerCss') || {};
-
-    if ($.isFunction(containerCss)) {
-      containerCss = containerCss(this.$element);
-    }
-
-    CompatUtils.syncCssClasses($container, this.$element, containerCssAdapter);
-
-    $container.css(containerCss);
-    $container.addClass(containerCssClass);
-
-    return $container;
-  };
-
-  return ContainerCSS;
-});
-
-S2.define('select2/compat/dropdownCss',[
-  'jquery',
-  './utils'
-], function ($, CompatUtils) {
-  // No-op CSS adapter that discards all classes by default
-  function _dropdownAdapter (clazz) {
-    return null;
-  }
-
-  function DropdownCSS () { }
-
-  DropdownCSS.prototype.render = function (decorated) {
-    var $dropdown = decorated.call(this);
-
-    var dropdownCssClass = this.options.get('dropdownCssClass') || '';
-
-    if ($.isFunction(dropdownCssClass)) {
-      dropdownCssClass = dropdownCssClass(this.$element);
-    }
-
-    var dropdownCssAdapter = this.options.get('adaptDropdownCssClass');
-    dropdownCssAdapter = dropdownCssAdapter || _dropdownAdapter;
-
-    if (dropdownCssClass.indexOf(':all:') !== -1) {
-      dropdownCssClass = dropdownCssClass.replace(':all:', '');
-
-      var _cssAdapter = dropdownCssAdapter;
-
-      dropdownCssAdapter = function (clazz) {
-        var adapted = _cssAdapter(clazz);
-
-        if (adapted != null) {
-          // Append the old one along with the adapted one
-          return adapted + ' ' + clazz;
-        }
-
-        return clazz;
-      };
-    }
-
-    var dropdownCss = this.options.get('dropdownCss') || {};
-
-    if ($.isFunction(dropdownCss)) {
-      dropdownCss = dropdownCss(this.$element);
-    }
-
-    CompatUtils.syncCssClasses($dropdown, this.$element, dropdownCssAdapter);
-
-    $dropdown.css(dropdownCss);
-    $dropdown.addClass(dropdownCssClass);
-
-    return $dropdown;
-  };
-
-  return DropdownCSS;
-});
-
 S2.define('select2/compat/initSelection',[
   'jquery'
 ], function ($) {
@@ -6574,6 +6453,164 @@ S2.define('jquery.select2',[
   }
 
   return Select2;
+});
+
+S2.define('select2/compat/utils',[
+  'jquery'
+], function ($) {
+  function syncCssClasses ($dest, $src, adapter) {
+    var classes, replacements = [], adapted;
+
+    classes = $.trim($dest.attr('class'));
+
+    if (classes) {
+      classes = '' + classes; // for IE which returns object
+
+      $(classes.split(/\s+/)).each(function () {
+        // Save all Select2 classes
+        if (this.indexOf('select2-') === 0) {
+          replacements.push(this);
+        }
+      });
+    }
+
+    classes = $.trim($src.attr('class'));
+
+    if (classes) {
+      classes = '' + classes; // for IE which returns object
+
+      $(classes.split(/\s+/)).each(function () {
+        // Only adapt non-Select2 classes
+        if (this.indexOf('select2-') !== 0) {
+          adapted = adapter(this);
+
+          if (adapted != null) {
+            replacements.push(adapted);
+          }
+        }
+      });
+    }
+
+    $dest.attr('class', replacements.join(' '));
+  }
+
+  return {
+    syncCssClasses: syncCssClasses
+  };
+});
+
+S2.define('select2/compat/containerCss',[
+  'jquery',
+  './utils'
+], function ($, CompatUtils) {
+  // No-op CSS adapter that discards all classes by default
+  function _containerAdapter (clazz) {
+    return null;
+  }
+
+  function ContainerCSS () { }
+
+  ContainerCSS.prototype.render = function (decorated) {
+    var $container = decorated.call(this);
+
+    var containerCssClass = this.options.get('containerCssClass') || '';
+
+    if ($.isFunction(containerCssClass)) {
+      containerCssClass = containerCssClass(this.$element);
+    }
+
+    var containerCssAdapter = this.options.get('adaptContainerCssClass');
+    containerCssAdapter = containerCssAdapter || _containerAdapter;
+
+    if (containerCssClass.indexOf(':all:') !== -1) {
+      containerCssClass = containerCssClass.replace(':all:', '');
+
+      var _cssAdapter = containerCssAdapter;
+
+      containerCssAdapter = function (clazz) {
+        var adapted = _cssAdapter(clazz);
+
+        if (adapted != null) {
+          // Append the old one along with the adapted one
+          return adapted + ' ' + clazz;
+        }
+
+        return clazz;
+      };
+    }
+
+    var containerCss = this.options.get('containerCss') || {};
+
+    if ($.isFunction(containerCss)) {
+      containerCss = containerCss(this.$element);
+    }
+
+    CompatUtils.syncCssClasses($container, this.$element, containerCssAdapter);
+
+    $container.css(containerCss);
+    $container.addClass(containerCssClass);
+
+    return $container;
+  };
+
+  return ContainerCSS;
+});
+
+S2.define('select2/compat/dropdownCss',[
+  'jquery',
+  './utils'
+], function ($, CompatUtils) {
+  // No-op CSS adapter that discards all classes by default
+  function _dropdownAdapter (clazz) {
+    return null;
+  }
+
+  function DropdownCSS () { }
+
+  DropdownCSS.prototype.render = function (decorated) {
+    var $dropdown = decorated.call(this);
+
+    var dropdownCssClass = this.options.get('dropdownCssClass') || '';
+
+    if ($.isFunction(dropdownCssClass)) {
+      dropdownCssClass = dropdownCssClass(this.$element);
+    }
+
+    var dropdownCssAdapter = this.options.get('adaptDropdownCssClass');
+    dropdownCssAdapter = dropdownCssAdapter || _dropdownAdapter;
+
+    if (dropdownCssClass.indexOf(':all:') !== -1) {
+      dropdownCssClass = dropdownCssClass.replace(':all:', '');
+
+      var _cssAdapter = dropdownCssAdapter;
+
+      dropdownCssAdapter = function (clazz) {
+        var adapted = _cssAdapter(clazz);
+
+        if (adapted != null) {
+          // Append the old one along with the adapted one
+          return adapted + ' ' + clazz;
+        }
+
+        return clazz;
+      };
+    }
+
+    var dropdownCss = this.options.get('dropdownCss') || {};
+
+    if ($.isFunction(dropdownCss)) {
+      dropdownCss = dropdownCss(this.$element);
+    }
+
+    CompatUtils.syncCssClasses($dropdown, this.$element, dropdownCssAdapter);
+
+    $dropdown.css(dropdownCss);
+    $dropdown.addClass(dropdownCssClass);
+
+    return $dropdown;
+  };
+
+  return DropdownCSS;
 });
 
   // Return the AMD loader configuration so it can be used outside of this file
