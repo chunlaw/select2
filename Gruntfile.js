@@ -4,14 +4,14 @@ module.exports = function (grunt) {
     'jquery.select2',
     'almond',
 
-    'jquery-mousewheel' // shimmed for non-full builds
+    'jquery-mousewheel', // shimmed for non-full builds
+
+    'select2/compat/containerCss',
+    'select2/compat/dropdownCss'
   ];
 
   fullIncludes = [
     'jquery',
-
-    'select2/compat/containerCss',
-    'select2/compat/dropdownCss',
 
     'select2/compat/initSelection',
     'select2/compat/inputData',
